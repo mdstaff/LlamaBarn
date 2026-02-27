@@ -34,6 +34,7 @@ LlamaBarn runs a local server at `http://localhost:2276/v1`.
 - **Smart model catalog** — shows what fits your Mac, with quantized fallbacks for what doesn't
 - **Standard storage** — models live in the Hugging Face cache (`~/.cache/huggingface/hub`), shared with `llama.cpp` and other HF-aware tools
 - **Built on llama.cpp** — from the GGML org, developed alongside llama.cpp
+- **Backed by Hugging Face** — ggml.ai joined Hugging Face in February 2026 with a shared mission to make local AI accessible on personal hardware
 
 ## Works with
 

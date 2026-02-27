@@ -176,6 +176,10 @@ class LlamaServer {
       "--fit-target", String(Int(CatalogEntry.memOverheadMb)),
     ]
 
+    // Memory optimization for large models on 24GB Apple Silicon
+    // See specs/memory-optimization-24gb.md
+    arguments.append(contentsOf: ["-fa", "on", "-ctk", "q8_0", "-ctv", "q8_0"])
+
     // Bind to custom address if network exposure is enabled
     if let bindAddress = UserSettings.networkBindAddress {
       arguments.append(contentsOf: ["--host", bindAddress])

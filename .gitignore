@@ -4,6 +4,7 @@ _*
 *.md
 !readme.md
 !contributing.md
+!specs/*.md
 
 *.log
 

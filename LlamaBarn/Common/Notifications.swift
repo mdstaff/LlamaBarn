@@ -14,4 +14,5 @@ extension Notification.Name {
   // speech-bubble hint (e.g. deeplink install started). userInfo["message"]
   // carries the text.
   static let LBShowMenuHint = Notification.Name("LBShowMenuHint")
+  static let LBMemoryPressureDidOccur = Notification.Name("LBMemoryPressureDidOccur")
 }

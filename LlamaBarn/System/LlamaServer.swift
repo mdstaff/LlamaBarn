@@ -164,6 +164,7 @@ class LlamaServer {
       "--port", String(port),
       "--models-max", "1",
       "--log-file", "/tmp/llama-server.log",
+      "--log-verbosity", "1",
       "--jinja",
       "--fit-target", String(Int(CatalogEntry.memOverheadMb)),
     ]
@@ -405,6 +406,7 @@ class LlamaServer {
       }
 
       let previouslyLoaded = self.modelStatuses.first(where: { $0.value == "loaded" })?.key
+
 
       if let newLoadedId = newStatuses.first(where: { $0.value == "loaded" })?.key,
          newLoadedId != previouslyLoaded,

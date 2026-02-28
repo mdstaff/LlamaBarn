@@ -25,6 +25,11 @@ struct LlamaServerAPI {
     await post(endpoint: "models/unload", body: ["model": id])
   }
 
+  /// Returns true if the server is up and ready to accept requests.
+  func isReady() async -> Bool {
+    await get(endpoint: "health", timeout: 1.0) != nil
+  }
+
   /// Fetches the current status of all models.
   /// Returns a dictionary mapping model IDs to their status strings.
   func fetchModelStatuses() async -> [String: String]? {
@@ -65,7 +70,7 @@ struct LlamaServerAPI {
 
   // MARK: - Private Helpers
 
-  private var baseUrl: String { "http://localhost:\(port)" }
+  private var baseUrl: String { "http://127.0.0.1:\(port)" }
 
   /// Sends a GET request and returns the response data.
   private func get(endpoint: String, timeout: TimeInterval = 2.0) async -> Data? {

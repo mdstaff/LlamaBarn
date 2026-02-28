@@ -382,6 +382,10 @@ class LlamaServer {
     stopStatusPolling()
 
     healthCheckTask = Task {
+      // Wait for llama-server to be ready before polling to avoid connection noise during startup.
+      while !Task.isCancelled && !(await api.isReady()) {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+      }
       // Poll /models to detect status.
       while !Task.isCancelled {
         await checkStatus()

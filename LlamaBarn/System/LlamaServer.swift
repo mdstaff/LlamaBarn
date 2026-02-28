@@ -227,6 +227,7 @@ class LlamaServer {
       self.state = .error(.launchFailed(errorMessage))
       return
     }
+    MemoryPressureMonitor.shared.start()
     startStatusPolling(port: port)
   }
 
@@ -258,6 +259,7 @@ class LlamaServer {
     cleanUpPipes()
     stopStatusPolling()
     stopMemoryMonitoring()
+    MemoryPressureMonitor.shared.stop()
   }
 
   /// Gracefully terminates the currently running process

@@ -59,6 +59,7 @@ final class ModelItemView: ItemView, NSGestureRecognizerDelegate {
   // Hover action buttons (shown on hover for installed models)
   private let copyIdButton = NSButton()
   private let deleteButton = NSButton()
+  private let loadButton = NSButton()
   private let hoverButtonsStack = NSStackView()
 
   init(
@@ -101,15 +102,19 @@ final class ModelItemView: ItemView, NSGestureRecognizerDelegate {
     // Configure hover action buttons
     Theme.configure(copyIdButton, symbol: "doc.on.doc", tooltip: "Copy model ID")
     Theme.configure(deleteButton, symbol: "trash", tooltip: "Delete model")
+    Theme.configure(loadButton, symbol: "play.circle", tooltip: "Load model")
 
     copyIdButton.target = self
     copyIdButton.action = #selector(didClickCopyId)
     deleteButton.target = self
     deleteButton.action = #selector(didClickDelete)
+    loadButton.target = self
+    loadButton.action = #selector(didClickLoad)
 
     // Configure hover buttons stack
     hoverButtonsStack.orientation = .horizontal
     hoverButtonsStack.spacing = 4
+    hoverButtonsStack.addArrangedSubview(loadButton)
     hoverButtonsStack.addArrangedSubview(copyIdButton)
     hoverButtonsStack.addArrangedSubview(deleteButton)
 
@@ -176,6 +181,7 @@ final class ModelItemView: ItemView, NSGestureRecognizerDelegate {
     Layout.constrainToIconSize(cancelImageView)
     Layout.constrainToIconSize(pausePlayImageView)
     Layout.constrainToIconSize(unloadButton)
+    Layout.constrainToIconSize(loadButton)
     Layout.constrainToIconSize(copyIdButton)
     Layout.constrainToIconSize(deleteButton)
     Layout.constrainToIconSize(installedBadge)
@@ -248,6 +254,10 @@ final class ModelItemView: ItemView, NSGestureRecognizerDelegate {
     actionHandler.performPrimaryAction(for: model)
   }
 
+  @objc private func didClickLoad() {
+    server.loadModel(model)
+  }
+
   @objc private func didClickCopyId() {
     Clipboard.copy(model.id)
     Theme.updateCopyIcon(copyIdButton, showingConfirmation: true)
@@ -270,7 +280,7 @@ final class ModelItemView: ItemView, NSGestureRecognizerDelegate {
   ) -> Bool {
     let loc = event.locationInWindow
     let actionTargets: [NSView] = [
-      unloadButton, copyIdButton, deleteButton, cancelImageView, pausePlayImageView,
+      unloadButton, loadButton, copyIdButton, deleteButton, cancelImageView, pausePlayImageView,
     ]
     return !actionTargets.contains { view in
       !view.isHidden && view.bounds.contains(view.convert(loc, from: nil))
@@ -406,6 +416,7 @@ final class ModelItemView: ItemView, NSGestureRecognizerDelegate {
     super.viewDidChangeEffectiveAppearance()
     cancelImageView.contentTintColor = .systemRed
     unloadButton.contentTintColor = .tertiaryLabelColor
+    loadButton.contentTintColor = .tertiaryLabelColor
     copyIdButton.contentTintColor = .tertiaryLabelColor
     deleteButton.contentTintColor = .tertiaryLabelColor
     installedBadge.contentTintColor = .tertiaryLabelColor

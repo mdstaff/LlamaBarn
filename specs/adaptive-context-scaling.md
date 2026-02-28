@@ -1,5 +1,8 @@
 # Adaptive Context Scaling — Technical Spec
 
+> **Status: Implemented** — `MemoryPressureMonitor.swift` merged into `dev` and available as
+> `feat/memory-pressure-monitor` for upstream contribution.
+
 ## Strategic Context
 
 **Upstream gap**: The `-fa on`, `-ctk q8_0`, `-ctv q8_0` flags in our fork (see
@@ -205,7 +208,7 @@ final class MemoryPressureMonitor {
       logger.warning("Memory pressure: in-flight generation did not complete within timeout — forcing unload")
     }
 
-    guard let model = CatalogEntry.all.first(where: { $0.modelFilePath == activePath }) else {
+    guard let model = Catalog.allModels().first(where: { $0.modelFilePath == activePath }) else {
       logger.error("Memory pressure: could not find catalog entry for active model path")
       return
     }

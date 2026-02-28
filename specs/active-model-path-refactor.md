@@ -1,5 +1,7 @@
 # activeModelPath Refactor — Technical Spec
 
+> **Status: Implemented** — merged into `dev` as `feat/active-model-path-refactor`.
+
 ## Problem
 
 `LlamaServer.activeModelPath` is manually managed state that can drift from reality.
@@ -86,7 +88,8 @@ let previouslyLoaded = self.modelStatuses.first(where: { $0.value == "loaded" })
 if let newLoadedId = newStatuses.first(where: { $0.value == "loaded" })?.key,
    newLoadedId != previouslyLoaded,
    let model = Catalog.allModels().first(where: { $0.id == newLoadedId }) {
-  self.logger.info("Model loaded: \(model.displayName, privacy: .public) | ctx: \(model.ctxWindow, privacy: .public) tokens | quant: \(model.quantization, privacy: .public) | size: \(model.fileSize / 1_000_000, privacy: .public) MB")
+  let effectiveCtx = model.effectiveCtxTier?.label ?? "\(model.ctxWindow / 1024)k"
+  self.logger.info("Model loaded: \(model.displayName, privacy: .public) | ctx: \(effectiveCtx, privacy: .public) | quant: \(model.quantization, privacy: .public) | size: \(model.fileSize / 1_000_000, privacy: .public) MB")
 }
 ```
 

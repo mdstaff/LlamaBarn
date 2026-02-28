@@ -1,17 +1,36 @@
-# Polling Startup Gate — Technical Spec
+# Polling Startup Gate & IPv4 Fix — Technical Spec
 
 ## Problem
 
-Status polling starts immediately after `process.run()` succeeds, but llama-server
-takes several seconds to initialize before it accepts HTTP connections. During this
-window, every poll attempt generates `nw_socket_handle_socket_event SO_ERROR [61:
-Connection refused]` log noise from the Apple network stack.
+Two sources of `nw_socket SO_ERROR [61: Connection refused]` log noise:
 
-A dedicated `URLSession` with `httpShouldUsePipelining` was attempted as a fix but
+1. **Startup noise**: Status polling starts immediately after `process.run()` succeeds,
+   but llama-server takes several seconds to initialize. Every poll attempt during this
+   window generates connection refused errors from the Apple network stack.
+
+2. **Per-request noise**: `localhost` resolves to `::1` (IPv6) first on macOS. llama-server
+   only listens on IPv4 (`127.0.0.1`), so every request generates an IPv6 probe error before
+   falling back to IPv4 — even after the server is fully ready.
+
+A dedicated `URLSession` with `httpShouldUsePipelining` was attempted for problem 1 but
 made things worse — llama-server closes connections after each response, so pipelining
 caused every subsequent poll to fail even after the server was ready.
 
 ## Solution
+
+Two changes, both in `feat/fix-ipv4-polling`:
+
+### 1. Use `127.0.0.1` instead of `localhost`
+
+In `LlamaServerAPI.swift`, change `baseUrl` to use `127.0.0.1` explicitly:
+
+```swift
+private var baseUrl: String { "http://127.0.0.1:\(port)" }
+```
+
+This eliminates the IPv6 probe on every request.
+
+### 2. Gate the poll loop on a `/health` readiness check
 
 Gate the poll loop on a `/health` check before beginning status polling. The loop
 retries every 500ms until the server responds, then begins normal 1-second polling.
@@ -50,5 +69,5 @@ log noise.
 
 ## File References
 
-- `LlamaBarn/System/LlamaServerAPI.swift` — `isReady()` added
+- `LlamaBarn/System/LlamaServerAPI.swift` — `isReady()` added, `baseUrl` changed to `127.0.0.1`
 - `LlamaBarn/System/LlamaServer.swift` — `startStatusPolling()` gated on `isReady()`

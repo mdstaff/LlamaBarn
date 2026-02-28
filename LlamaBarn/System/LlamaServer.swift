@@ -58,7 +58,12 @@ class LlamaServer {
   var state: ServerState = .idle {
     didSet { NotificationCenter.default.post(name: .LBServerStateDidChange, object: self) }
   }
-  var activeModelPath: String?
+  var activeModelPath: String? {
+    guard let loadedId = modelStatuses.first(where: { $0.value == "loaded" })?.key else {
+      return nil
+    }
+    return Catalog.allModels().first(where: { $0.id == loadedId })?.modelFilePath
+  }
   var modelStatuses: [String: String] = [:] {
     didSet { NotificationCenter.default.post(name: .LBModelStatusDidChange, object: self) }
   }
@@ -220,7 +225,6 @@ class LlamaServer {
       let errorMessage = "Process launch failed: \(error.localizedDescription)"
       logger.error("Failed to launch process: \(error)")
       self.state = .error(.launchFailed(errorMessage))
-      self.activeModelPath = nil
       return
     }
     startStatusPolling(port: port)
@@ -231,8 +235,6 @@ class LlamaServer {
     // Set to .idle before terminating so the handler knows this is intentional
     memoryUsageMb = 0
     state = .idle
-
-    activeModelPath = nil
 
     cleanUpResources()
   }
@@ -333,9 +335,7 @@ class LlamaServer {
     }
 
     // In Router Mode, the model is loaded via the /models/load endpoint.
-    // We update local state so the UI knows what's selected.
-    self.activeModelPath = model.modelFilePath
-    logger.info("Requested active model: \(model.displayName)")
+    // Status is reflected via polling — no local state update needed.
   }
 
   /// Deselects the current model in the UI.
@@ -349,9 +349,6 @@ class LlamaServer {
       _ = await api.unloadModel(id: idToUnload)
     }
 
-    if activeModelPath == model.modelFilePath {
-      activeModelPath = nil
-    }
   }
 
   private func cleanUpPipes() {
@@ -395,11 +392,6 @@ class LlamaServer {
         let isSleeping = await api.isModelSleeping(id: loadedModelId)
         if isSleeping {
           _ = await api.unloadModel(id: loadedModelId)
-          await MainActor.run {
-            if self.activeModelPath != nil {
-              self.activeModelPath = nil
-            }
-          }
         }
       }
     }

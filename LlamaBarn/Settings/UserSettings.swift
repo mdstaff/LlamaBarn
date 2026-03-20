@@ -18,6 +18,20 @@ enum UserSettings {
     }
   }
 
+  enum KVCacheType: String, CaseIterable {
+    case f16 = "f16"
+    case q8_0 = "q8_0"
+    case q4_0 = "q4_0"
+
+    var displayName: String {
+      switch self {
+      case .f16: return "f16"
+      case .q8_0: return "q8_0"
+      case .q4_0: return "q4_0"
+      }
+    }
+  }
+
   private enum Keys {
     static let hasSeenWelcome = "hasSeenWelcome"
     static let exposeToNetwork = "exposeToNetwork"
@@ -25,6 +39,8 @@ enum UserSettings {
     static let selectedCtxTiers = "selectedCtxTiers"
     static let modelStorageDirectory = "modelStorageDirectory"
     static let hfToken = "hfToken"
+    static let keyCacheType = "keyCacheType"
+    static let valueCacheType = "valueCacheType"
   }
 
   private static let defaults = UserDefaults.standard
@@ -145,6 +161,36 @@ enum UserSettings {
   static var isModelStorageDirectoryAvailable: Bool {
     let dir = modelStorageDirectory
     return FileManager.default.fileExists(atPath: dir.path)
+  }
+
+  // MARK: - KV Cache Type
+
+  /// Quantization for the Key cache. Defaults to f16 — K-cache is sensitive to precision
+  /// loss due to its interaction with RoPE, so full precision is recommended.
+  static var keyCacheType: KVCacheType {
+    get {
+      guard let raw = defaults.string(forKey: Keys.keyCacheType) else { return .f16 }
+      return KVCacheType(rawValue: raw) ?? .f16
+    }
+    set {
+      guard defaults.string(forKey: Keys.keyCacheType) != newValue.rawValue else { return }
+      defaults.set(newValue.rawValue, forKey: Keys.keyCacheType)
+      NotificationCenter.default.post(name: .LBUserSettingsDidChange, object: nil)
+    }
+  }
+
+  /// Quantization for the Value cache. Defaults to q8_0 — V-cache is resilient to
+  /// reduced precision, so q8_0 gives good memory savings with negligible quality loss.
+  static var valueCacheType: KVCacheType {
+    get {
+      guard let raw = defaults.string(forKey: Keys.valueCacheType) else { return .q8_0 }
+      return KVCacheType(rawValue: raw) ?? .q8_0
+    }
+    set {
+      guard defaults.string(forKey: Keys.valueCacheType) != newValue.rawValue else { return }
+      defaults.set(newValue.rawValue, forKey: Keys.valueCacheType)
+      NotificationCenter.default.post(name: .LBUserSettingsDidChange, object: nil)
+    }
   }
 
   // MARK: - Hugging Face Token

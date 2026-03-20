@@ -64,6 +64,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 struct SettingsView: View {
   @State private var launchAtLogin = LaunchAtLogin.isEnabled
   @State private var sleepIdleTime = UserSettings.sleepIdleTime
+  @State private var keyCacheType = UserSettings.keyCacheType
+  @State private var valueCacheType = UserSettings.valueCacheType
   @State private var modelStorageDir = UserSettings.modelStorageDirectory
   @State private var hfToken = UserSettings.hfToken ?? ""
 
@@ -94,6 +96,41 @@ struct SettingsView: View {
           }
 
           Text("Automatically unloads the model from memory when not in use.")
+            .font(.callout)
+            .foregroundStyle(.secondary)
+        }
+      }
+
+      // KV cache type section
+      Section {
+        VStack(alignment: .leading, spacing: 8) {
+          LabeledContent("K Cache") {
+            Picker("", selection: $keyCacheType) {
+              ForEach(UserSettings.KVCacheType.allCases, id: \.self) { type in
+                Text(type.displayName).tag(type)
+              }
+            }
+            .labelsHidden()
+            .fixedSize()
+            .onChange(of: keyCacheType) { _, newValue in
+              UserSettings.keyCacheType = newValue
+            }
+          }
+
+          LabeledContent("V Cache") {
+            Picker("", selection: $valueCacheType) {
+              ForEach(UserSettings.KVCacheType.allCases, id: \.self) { type in
+                Text(type.displayName).tag(type)
+              }
+            }
+            .labelsHidden()
+            .fixedSize()
+            .onChange(of: valueCacheType) { _, newValue in
+              UserSettings.valueCacheType = newValue
+            }
+          }
+
+          Text("K-cache is sensitive to precision loss — f16 is recommended. V-cache is more resilient, so q8_0 saves memory with negligible quality loss. q4_0 saves more but may affect output quality, especially at long contexts.")
             .font(.callout)
             .foregroundStyle(.secondary)
         }

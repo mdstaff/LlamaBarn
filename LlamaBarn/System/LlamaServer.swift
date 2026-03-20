@@ -169,9 +169,13 @@ class LlamaServer {
       "--fit-target", String(Int(CatalogEntry.memOverheadMb)),
     ]
 
-    // Memory optimization for large models on 24GB Apple Silicon
-    // See specs/memory-optimization-24gb.md
-    arguments.append(contentsOf: ["-fa", "on", "-ctk", "q8_0", "-ctv", "q8_0"])
+    // Flash attention + user-configured KV cache quantization (K and V are set independently
+    // as K-cache is sensitive to precision loss due to RoPE, while V-cache is more resilient)
+    arguments.append(contentsOf: [
+      "-fa", "on",
+      "-ctk", UserSettings.keyCacheType.rawValue,
+      "-ctv", UserSettings.valueCacheType.rawValue,
+    ])
 
     // Bind to custom address if network exposure is enabled
     if let bindAddress = UserSettings.networkBindAddress {
@@ -368,7 +372,8 @@ class LlamaServer {
 
     healthCheckTask = Task {
       // Wait for llama-server to be ready before polling to avoid connection noise during startup.
-      while !Task.isCancelled && !(await api.isReady()) {
+      while !Task.isCancelled {
+        if await api.isReady() { break }
         try? await Task.sleep(nanoseconds: 500_000_000)
       }
       // Poll /models to detect status.

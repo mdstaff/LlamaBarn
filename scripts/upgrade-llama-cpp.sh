@@ -3,17 +3,20 @@
 #
 # Usage:
 #   ./scripts/upgrade-llama-cpp.sh <tag>
+#   ./scripts/upgrade-llama-cpp.sh --check <tag>   # verify asset exists, do not install
 #
 # Examples:
-#   ./scripts/upgrade-llama-cpp.sh b8165
+#   ./scripts/upgrade-llama-cpp.sh b8416
+#   ./scripts/upgrade-llama-cpp.sh --check b8416
 #
 # What it does:
-#   1. Downloads llama-{tag}-bin-macos-arm64.tar.gz from ggml-org/llama.cpp releases
-#   2. Extracts it to a temp dir
-#   3. Copies real files only (resolves symlinks) — renames *.0.9.x.dylib → *.0.dylib
-#   4. Replaces llama-cpp/ contents in the repo
-#   5. Writes version.txt
-#   6. Validates codesign and dylib linkage on the installed binary
+#   1. Verifies the macOS arm64 asset exists on ggml-org/llama.cpp releases
+#   2. Downloads llama-{tag}-bin-macos-arm64.tar.gz
+#   3. Extracts it to a temp dir
+#   4. Copies real files only (resolves symlinks) — renames *.0.9.x.dylib → *.0.dylib
+#   5. Replaces llama-cpp/ contents in the repo
+#   6. Writes version.txt
+#   7. Validates codesign and dylib linkage on the installed binary
 #
 # Requirements:
 #   - gh CLI (brew install gh) authenticated
@@ -23,19 +26,50 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LLAMA_CPP_DIR="$REPO_ROOT/llama-cpp"
-TAG="${1:-}"
 
-# --- Validate args ---
+# --- Parse args ---
+CHECK_ONLY=false
+TAG=""
+
+for arg in "$@"; do
+  case "$arg" in
+    --check) CHECK_ONLY=true ;;
+    *) TAG="$arg" ;;
+  esac
+done
+
 if [[ -z "$TAG" ]]; then
   echo "error: tag required" >&2
-  echo "usage: $0 <tag>   (e.g. $0 b8165)" >&2
+  echo "usage: $0 [--check] <tag>   (e.g. $0 b8416)" >&2
   exit 1
 fi
 
 ASSET="llama-${TAG}-bin-macos-arm64.tar.gz"
+
+# --- Verify asset exists on GitHub before touching anything ---
+echo "▶ Verifying $ASSET exists on ggml-org/llama.cpp@$TAG..."
+ASSET_SIZE="$(gh release view "$TAG" \
+  --repo ggml-org/llama.cpp \
+  --json assets \
+  --jq ".assets[] | select(.name == \"$ASSET\") | .size" 2>/dev/null || true)"
+
+if [[ -z "$ASSET_SIZE" ]]; then
+  echo "error: asset '$ASSET' not found in release $TAG on ggml-org/llama.cpp" >&2
+  echo "  Check available assets with: gh release view $TAG --repo ggml-org/llama.cpp" >&2
+  exit 1
+fi
+echo "✓ Asset found ($(( ASSET_SIZE / 1024 / 1024 )) MB)"
+
+if [[ "$CHECK_ONLY" == true ]]; then
+  echo ""
+  echo "✓ Check passed — $ASSET exists. Run without --check to install."
+  exit 0
+fi
+
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
+echo ""
 echo "▶ Upgrading llama-cpp to $TAG"
 echo "  Repo       : $REPO_ROOT"
 echo "  llama-cpp/ : $LLAMA_CPP_DIR"
